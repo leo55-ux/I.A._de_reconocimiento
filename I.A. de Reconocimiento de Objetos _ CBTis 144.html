@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>I.A. de Reconocimiento de Objetos | CBTis 144</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  --bg:#F3F5F7; --surface:#FFFFFF; --ink:#10202F; --muted:#51606E; --line:#D5DBE1;
+  --hero:#0F1D2B; --hero-ink:#EAF1F6; --scan:#19B5C9; --money:#2F8F5B; --warn:#E8A33B;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#0B141D; --surface:#13212F; --ink:#E6EDF3; --muted:#9AA9B6; --line:#26384A; --hero:#08111A; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{--bg:#0B141D; --surface:#13212F; --ink:#E6EDF3; --muted:#9AA9B6; --line:#26384A; --hero:#08111A; color-scheme:dark;}
+html{scroll-padding-top:env(safe-area-inset-top,0px);scroll-behavior:smooth}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 1.0625rem/1.65 "IBM Plex Sans",system-ui,sans-serif}
+h1,h2,h3{font-family:"Bricolage Grotesque","Arial Narrow",sans-serif;line-height:1.1;margin:0}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--scan);outline-offset:3px}
+.wrap{max-width:1040px;margin:0 auto;padding:0 1.25rem}
+
+/* HERO */
+.hero{background:var(--hero);color:var(--hero-ink);padding:2.5rem 0 3.5rem}
+.school{font-size:.95rem;color:#9FB3C4;max-width:46ch}
+.hero-grid{display:grid;gap:2.5rem;margin-top:2.5rem;align-items:center}
+@media(min-width:860px){.hero-grid{grid-template-columns:1.1fr 1fr}}
+h1{font-size:clamp(2.6rem,7vw,4.8rem);font-weight:800;letter-spacing:-.02em}
+.tag{margin:1.25rem 0 0;font-size:1.2rem;color:#B9CBDA;max-width:34ch}
+.group{margin-top:1.75rem;font-weight:600;color:#fff}
+
+/* Visor */
+.viewfinder{position:relative;aspect-ratio:4/3;border-radius:6px;overflow:hidden;
+  background:linear-gradient(160deg,#1B3042,#0C1822);border:1px solid #27425A}
+.viewfinder::before,.viewfinder::after{content:"";position:absolute;inset:14px;border:2px solid var(--scan);
+  clip-path:polygon(0 0,28px 0,28px 2px,2px 2px,2px 28px,0 28px,
+  0 100%,0 calc(100% - 28px),2px calc(100% - 28px),2px calc(100% - 2px),28px calc(100% - 2px),28px 100%,
+  100% 100%,calc(100% - 28px) 100%,calc(100% - 28px) calc(100% - 2px),calc(100% - 2px) calc(100% - 2px),calc(100% - 2px) calc(100% - 28px),100% calc(100% - 28px),
+  100% 0,calc(100% - 28px) 0,calc(100% - 28px) 2px,calc(100% - 2px) 2px,calc(100% - 2px) 28px,100% 28px);
+  border:0;background:var(--scan);opacity:.9}
+.viewfinder::after{display:none}
+.obj{position:absolute;border:2px solid var(--c);border-radius:3px;opacity:0;animation:pop .5s ease forwards}
+.obj span{position:absolute;left:-2px;top:-26px;background:var(--c);color:#06121C;font:600 .78rem/1 "IBM Plex Sans",sans-serif;padding:6px 8px;border-radius:3px 3px 3px 0;white-space:nowrap}
+.o-door{--c:var(--warn);left:8%;top:20%;width:30%;height:66%;animation-delay:.4s}
+.o-person{--c:var(--scan);left:44%;top:26%;width:20%;height:60%;animation-delay:.9s}
+.o-bill{--c:var(--money);left:68%;top:46%;width:25%;height:20%;animation-delay:1.4s}
+.o-door::after{content:"";position:absolute;right:12%;top:50%;width:7px;height:7px;border-radius:50%;background:var(--c);opacity:.7}
+.o-person::after{content:"";position:absolute;left:50%;top:10%;width:34%;aspect-ratio:1;transform:translateX(-50%);border-radius:50%;border:2px solid var(--c);opacity:.5}
+.scanline{position:absolute;left:0;right:0;height:2px;background:var(--scan);box-shadow:0 0 18px 4px rgba(25,181,201,.55);top:0;animation:scan 3.6s ease-in-out 2 }
+@keyframes scan{0%{top:4%}50%{top:96%}100%{top:4%}}
+@keyframes pop{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:none}}
+.vf-note{position:absolute;left:18px;bottom:14px;font-size:.8rem;color:#9FB3C4}
+@media(prefers-reduced-motion:reduce){.obj{animation:none;opacity:1}.scanline{animation:none;display:none}}
+
+/* Secciones */
+section{padding:3.5rem 0;border-bottom:1px solid var(--line)}
+h2{font-size:clamp(1.8rem,4vw,2.5rem);font-weight:700;margin-bottom:1.25rem;letter-spacing:-.01em}
+h3{font-size:1.2rem;font-weight:700;margin-bottom:.4rem}
+p{margin:0 0 1rem;max-width:68ch}
+.lead{font-size:1.25rem;max-width:56ch}
+.qa{display:grid;gap:1.75rem}
+@media(min-width:760px){.qa{grid-template-columns:1fr 1fr}}
+.qa>div{padding-left:1rem;border-left:3px solid var(--scan)}
+.qa p{margin:0}
+
+/* Tabla */
+.scroll{overflow-x:auto;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;min-width:520px}
+th,td{text-align:left;padding:.9rem 1rem;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:"Bricolage Grotesque",sans-serif;font-size:1rem}
+tr:last-child td{border-bottom:0}
+td.n{text-align:center;width:6rem}
+
+/* Flujo */
+.flow{display:grid;gap:.75rem;margin:1.5rem 0}
+@media(min-width:760px){.flow{grid-template-columns:1fr auto 1fr auto 1fr;align-items:stretch}}
+.step{background:var(--surface);border:1px solid var(--line);border-top:4px solid var(--scan);border-radius:6px;padding:1.1rem 1.2rem}
+.step.mid{border-top-color:var(--warn)}.step.out{border-top-color:var(--money)}
+.step h3{margin-bottom:.3rem}.step p{margin:0;font-size:.98rem;color:var(--muted)}
+.arrow{align-self:center;justify-self:center;color:var(--muted);font-size:1.6rem;line-height:1}
+@media(max-width:759px){.arrow{transform:rotate(90deg)}}
+
+/* Evidencias */
+.shots{display:grid;gap:1rem;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.shot{aspect-ratio:4/3;border:2px dashed var(--line);border-radius:6px;display:grid;place-items:center;text-align:center;color:var(--muted);padding:1rem;font-size:.95rem;background:var(--surface)}
+
+/* Resultados */
+.tests{display:grid;gap:.6rem;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin:0 0 2rem;padding:0;list-style:none}
+.tests li{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:.9rem 1rem;font-weight:500}
+.tests li b{display:block;font-family:"Bricolage Grotesque",sans-serif;font-size:1.3rem}
+.fix{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:6px;padding:1.1rem 1.25rem;margin-top:1.5rem}
+.fix p{margin:0}
+
+/* Mejoras */
+.ideas{list-style:none;margin:0;padding:0;display:grid;gap:.75rem}
+.ideas li{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:1rem 1.2rem}
+
+/* Conclusión y pie */
+.concl p{max-width:70ch}
+footer{background:var(--hero);color:#B9CBDA;padding:2.5rem 0 3rem}
+footer h3{color:#fff;margin-bottom:.75rem}
+footer ul{margin:0 0 1.5rem;padding:0;list-style:none;columns:1;gap:2rem}
+@media(min-width:700px){footer ul{columns:2}}
+footer li{margin-bottom:.3rem}
+footer small{display:block;color:#8399AB}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="school">Centro de Bachillerato Tecnológico Industrial y de Servicios No. 144</div>
+    <div class="hero-grid">
+      <div>
+        <h1>I.A. de Reconocimiento de Objetos</h1>
+        <p class="tag">Apunta la cámara de tu celular. La inteligencia artificial te dice qué objeto es, en texto y en voz.</p>
+        <p class="group">5°A Inteligencia Artificial · Matutino<br>Automatiza procesos con Inteligencia Artificial</p>
+      </div>
+      <div class="viewfinder" role="img" aria-label="Ilustración de un visor de cámara que detecta una puerta, una persona y un billete">
+        <div class="scanline"></div>
+        <div class="obj o-door"><span>Puerta</span></div>
+        <div class="obj o-person"><span>Persona</span></div>
+        <div class="obj o-bill"><span>Billete $100</span></div>
+        <div class="vf-note">Ilustración del funcionamiento</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main>
+<section id="proyecto">
+  <div class="wrap">
+    <h2>¿En qué consiste el proyecto?</h2>
+    <p class="lead">Es una página web que detecta objetos como puertas, billetes, personas y balones usando Machine Learning, y le dice al usuario qué objeto es.</p>
+    <div class="qa" style="margin-top:2rem">
+      <div><h3>¿Qué problema busca resolver?</h3><p>Clasificar o detectar objetos.</p></div>
+      <div><h3>¿Cuál es su objetivo?</h3><p>Clasificar y detectar todo tipo de objetos.</p></div>
+      <div style="grid-column:1/-1"><h3>¿Cómo funciona?</h3><p>Por medio de la cámara de un dispositivo móvil y un programa de Machine Learning, escanea el objeto para saber qué es y lo dice tanto con texto como pronunciando su nombre.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="materiales">
+  <div class="wrap">
+    <h2>Lista de materiales y componentes</h2>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Componente</th><th class="n">Cantidad</th><th>Función</th></tr></thead>
+        <tbody>
+          <tr><td>Dispositivo móvil</td><td class="n">1</td><td>Usar la cámara para escanear los objetos.</td></tr>
+          <tr><td>Programa de Machine Learning</td><td class="n">1</td><td>Clasifica los objetos después de haber sido escaneados por la cámara del dispositivo móvil.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section id="funcionamiento">
+  <div class="wrap">
+    <h2>Diagrama de funcionamiento</h2>
+    <div class="flow">
+      <div class="step"><h3>Entrada</h3><p>Cámara del dispositivo móvil.</p></div>
+      <div class="arrow" aria-hidden="true">→</div>
+      <div class="step mid"><h3>Procesamiento</h3><p>Programa de Machine Learning para la clasificación.</p></div>
+      <div class="arrow" aria-hidden="true">→</div>
+      <div class="step out"><h3>Salida</h3><p>Programa de Machine Learning y dispositivo móvil: muestra la clasificación ya procesada.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="evidencias">
+  <div class="wrap">
+    <h2>Evidencias fotográficas</h2>
+    <div class="shots">
+      <div class="shot">Foto 1<br>Billete escaneado</div>
+      <div class="shot">Foto 2<br>Persona detectada</div>
+      <div class="shot">Foto 3<br>Puerta detectada</div>
+    </div>
+  </div>
+</section>
+
+<section id="resultados">
+  <div class="wrap">
+    <h2>Pruebas y resultados</h2>
+    <h3>¿Qué pruebas realizaron?</h3>
+    <p>Se escanearon billetes, personas y una puerta.</p>
+    <ul class="tests">
+      <li><b>$100</b>Billete</li>
+      <li><b>$50</b>Billete</li>
+      <li><b>$20</b>Billete</li>
+      <li><b>Persona</b>Hombre y mujer</li>
+      <li><b>Puerta</b>Objeto</li>
+    </ul>
+    <div class="qa">
+      <div><h3>¿Funcionó como esperaban?</h3><p>Funcionó correctamente, con una dificultad mínima: en ocasiones confundía objetos.</p></div>
+      <div><h3>¿Qué dificultades tuvieron?</h3><p>Algunos billetes se reconocieron como otra denominación. Por ejemplo, el de 50 lo reconoció como de 200.</p></div>
+    </div>
+    <div class="fix"><h3>¿Cómo solucionaron los problemas?</h3><p>Se mejoró el modelo de Machine Learning.</p></div>
+  </div>
+</section>
+
+<section id="mejoras">
+  <div class="wrap">
+    <h2>Propuestas de mejora</h2>
+    <ul class="ideas">
+      <li>Clasificar los colores de ciertos objetos (no personas).</li>
+      <li>Tener un catálogo de objetos más amplio.</li>
+      <li>Convertir la página web del modelo en una aplicación.</li>
+    </ul>
+  </div>
+</section>
+
+<section id="conclusion" class="concl" style="border-bottom:0">
+  <div class="wrap">
+    <h2>Conclusión</h2>
+    <p>Durante el desarrollo de este proyecto aprendimos a integrar tecnologías de desarrollo web con herramientas de inteligencia artificial y reconocimiento de imágenes. Aplicamos conocimientos sólidos en programación, utilizando HTML, CSS y JavaScript para diseñar una interfaz intuitiva, además de integrar la lógica y las librerías necesarias para que la plataforma pudiera procesar y analizar una fotografía en tiempo real. Esto nos permitió comprender de forma práctica cómo transformar conceptos teóricos de la informática en una aplicación funcional y accesible para cualquier usuario.</p>
+    <p>La importancia de esta página web radica en su capacidad para agilizar la identificación de elementos y ofrecer soluciones prácticas en la vida diaria. Al automatizar el reconocimiento de objetos, la herramienta puede aplicarse en múltiples áreas, desde fines educativos hasta mejorar la accesibilidad digital o clasificar información visual con rapidez. Este proyecto demuestra cómo la tecnología actual puede ser aprovechada para resolver problemas cotidianos de manera eficiente e interactiva.</p>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <h3>Integrantes</h3>
+    <ul>
+      <li>David Yael Gutiérrez Moguel</li>
+      <li>Abner Leonardo Ruiz Gálvez</li>
+      <li>Cristian Eduardo Niños Molina</li>
+      <li>Samara Valeria Cundapi Solorzano</li>
+      <li>Nayver Davis Guzmán López</li>
+    </ul>
+    <small>CBTis No. 144 · 5°A Inteligencia Artificial · Turno matutino</small>
+  </div>
+</footer>
+</body>
+</html>
